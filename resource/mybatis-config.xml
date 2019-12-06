@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE configuration
+PUBLIC "-//mybatis.org//DTD Config 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-config.dtd">
+
+<configuration>
+	
+	<!-- 为实体类的完整类名取一个别名，别名即为类名     User-->
+	<typeAliases>
+		<package name="cn.smbms.pojo"/>	
+	</typeAliases>
+	
+</configuration>

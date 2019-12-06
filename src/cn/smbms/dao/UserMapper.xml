@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="cn.smbms.dao.UserMapper">
+	
+	<!-- 通过用户名和用户密码查询用户详细对象信息 -->
+	<select id="queryByUserCodeAndPwd" resultType="User">
+		SELECT * FROM `smbms_user` WHERE 
+			`userCode` = #{userCode} AND `userPassword` = #{userPassword}
+	</select>
+	
+	<resultMap type="User" id="userAndRole">
+		<id property="id" column="id"/>
+		<result property="userCode" column="userCode"/>
+		<result property="userName" column="userName"/>
+		<result property="userPassword" column="gender"/>
+		<result property="phone" column="phone"/>
+		<result property="age" column="age"/>
+		<result property="address" column="address" />
+		<result property="creationDate" column="creationDate" />
+		<result property="gender" column="gender"/>
+		<result property="birthday" column="birthday"/>
+		<result property="idPicPath" column="idPicPath"/>
+		<association property="role" javaType="Role">
+			<id property="id" column="r_id"/>
+			<result property="roleCode" column="roleCode"/>
+			<result property="roleName" column="roleName"/>
+		</association>
+	</resultMap>
+	
+	
+	<!-- 按用户名与角色名字进行查询 -->
+	<select id="queryByCondition" resultMap="userAndRole" >
+		SELECT u.*,FLOOR(DATEDIFF(NOW(),u.birthday) / 365) age,r.id r_id,r.roleCode, r.`roleName` FROM `smbms_user` u, `smbms_role` r
+			WHERE u.`userRole` = r.`id`
+			<if test="userName !=null">
+				<!-- 按照用户名模糊查询 -->
+				and `userName` like CONCAT ('%', #{userName} ,'%')
+			</if>
+			<if test="roleId !=null and roleId != 0">
+				<!-- 按照用户角色编号精确查询 -->
+				and `userRole` = #{roleId}
+			</if>
+		<!-- 按照用户表数据新增的时间降序排序 -->
+		ORDER BY creationDate DESC limit #{from} , #{pageSize} 
+	</select>
+	
+	<!-- 按条件查询总记录数 -->
+	<select id="getTotalCount" resultType="int">
+		select count(1) from smbms_user
+		<where>
+			<if test="userName !=null">
+				<!-- 按照用户名模糊查询 -->
+				and `userName` like CONCAT ('%', #{userName} ,'%')
+			</if>
+			<if test="roleId !=null and roleId != 0">
+				<!-- 按照用户角色编号精确查询 -->
+				and `userRole` = #{roleId}
+			</if>
+		</where>
+	</select>
+	
+	<!-- 查询所有的角色列表，用户绑定用户角色下拉框 -->
+	<select id="queryAllRole" resultType="Role">
+		select * from  `smbms_role`
+	</select>
+	
+	<!-- 新增用户 -->
+	<insert id="addUser" parameterType="User">
+		INSERT INTO `smbms`.`smbms_user` (
+		  `userCode`,
+		  `userName`,
+		  `userPassword`,
+		  `gender`,
+		  `birthday`,
+		  `phone`,
+		  `address`,
+		  `userRole`,
+		  `createdBy`,
+		  `creationDate`,idPicPath
+		) 
+		VALUES
+		  ( #{userCode},
+		    #{userName},
+		    #{userPassword},
+		    #{gender},
+		    #{birthday},
+		    #{phone},
+		    #{address},
+		    #{userRole},
+		    #{createdBy},
+		    #{creationDate},#{idPicPath}
+		  ) 
+	</insert>
+	
+	<!-- 通过用户ID查询出用户详情信息 -->
+	<select id="queryUserById" resultMap="userAndRole">
+		SELECT u.*,FLOOR(DATEDIFF(NOW(),u.birthday) / 365) age,r.id r_id,r.roleCode, r.`roleName` FROM `smbms_user` u, `smbms_role` r
+			WHERE u.`userRole` = r.`id` AND u.id = #{uid}
+	</select>
+	
+	<!-- 修改用户信息 -->
+	<update id="updateUser" parameterType="User">
+		UPDATE `smbms_user` 
+		<set>
+			<if test="userCode != null">`userCode` = #{userCode},</if>
+			<if test="userName != null">`userName` = #{userName},</if>
+			<if test="userPassword != null">`userPassword` = #{userPassword},</if>
+			<if test="gender != null">`gender` = #{gender},</if>
+			<if test="birthday != null">`birthday` = #{birthday},</if>
+			<if test="phone != null">`phone` = #{phone},</if>
+			<if test="address != null">`address` = #{address},</if>
+			<if test="userRole != null">`userRole` = #{userRole},</if>
+			<if test="modifyBy != null">`modifyBy` = #{modifyBy},</if>
+			<if test="modifyDate != null">`modifyDate` = #{modifyDate},</if>
+		</set>
+		WHERE `id` = #{id} 
+	</update>
+	
+	
+</mapper>

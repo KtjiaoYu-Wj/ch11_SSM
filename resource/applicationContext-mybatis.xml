@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:p="http://www.springframework.org/schema/p"
+	xmlns:aop="http://www.springframework.org/schema/aop" xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:tx="http://www.springframework.org/schema/tx" xmlns:mvc="http://www.springframework.org/schema/mvc"
+	xsi:schemaLocation="http://www.springframework.org/schema/aop 
+		http://www.springframework.org/schema/aop/spring-aop-3.2.xsd
+		http://www.springframework.org/schema/mvc 
+		http://www.springframework.org/schema/mvc/spring-mvc-3.2.xsd
+		http://www.springframework.org/schema/beans 
+		http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/tx 
+		http://www.springframework.org/schema/tx/spring-tx-3.2.xsd
+		http://www.springframework.org/schema/context 
+		http://www.springframework.org/schema/context/spring-context-3.2.xsd">
+	
+	<!-- 1、引入database.properties配置文件 -->
+	<bean class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+		<property name="location" value="classpath:database.properties"/>
+	</bean>
+	<!-- 2、配置数据源 -->
+	<bean id="dataSource" class="org.apache.commons.dbcp.BasicDataSource">
+		<property name="driverClassName" value="${driver}"/>
+		<property name="url" value="${url}"/>
+		<property name="username" value="${username}"/>
+		<property name="password" value="${password}"/>
+	</bean>
+	<!-- 3、创建SqlSessionFactoryBean对象 -->
+	<bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+		<!-- 3.1 引入上一步配置的数据源对象 -->
+		<property name="dataSource" ref="dataSource"/>
+		<!-- 3.2 指定mybatis-config配置文件的路径 -->
+		<property name="configLocation" value="classpath:mybatis-config.xml"/>
+		<!-- 3.3 引入当前项目所有配置的SQL映射文件 -->
+		<property name="mapperLocations">
+			<list>
+				<value>classpath:cn/smbms/dao/**/*.xml</value>
+			</list>
+		</property>
+	</bean>
+	<!-- 4、使用MapperScannerConfigurer去简化Dao层的配置(DAO)
+		  实现为cn.smbms.dao包及其子包里的所有接口创建其接口实现类，并为其实现注入
+		 SqlSessionFactory实例对象。
+	 -->
+	<bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+		<property name="basePackage" value="cn.smbms.dao"/>
+	</bean>
+	<!-- 5、使用注解去简化Service层的配置， 让cn.smbms.service包及其子包中的注解生效 -->
+	<context:component-scan base-package="cn.smbms.service"/>
+	<!--START 6、使用AOP实现日志记录。START -->
+	<!-- 1、创建增强类SmbmsLogger -->
+	<!-- 2、创建增强类的实例对象 -->
+	<bean id="smsmbLogger" class="cn.smbms.logger.SmbmsLogger"/>
+	<!-- 3、使用aop:config标签实现将日志增强织入业务层的方法中 -->
+	<aop:config>
+		<!-- 3.1 定义一个切入点，使用表达式指定需要进行增强处理的连接位置 -->
+		<aop:pointcut expression="execution(* cn.smbms.service..*.*(..))" id="pointcut"/>
+		
+		<!-- 7.3 将上面定义好后的事务增强织入到业务层所有方法中 -->
+		<aop:advisor advice-ref="txAdvice" pointcut-ref="pointcut"/>
+		
+		<!-- 3.2 将增强类作为切面，将增强类中指定方法作为前置、后置、异常抛出增强等，并将这些增强处理织入到业务层的方法中 -->
+		<aop:aspect ref="smsmbLogger">
+			<!-- 3.2.1 将增强类SmbmsLogger中的before作为前置增强，织入到业务层的所有方法中 -->
+			<aop:before method="before" pointcut-ref="pointcut"/>
+			<!-- 3.2.1 将增强类SmbmsLogger中的afterReturning作为后置增强，织入到业务层的所有方法中 -->
+			<aop:after-returning method="afterReturning" pointcut-ref="pointcut" returning="result"/>
+			<!-- 3.2.1 将增强类SmbmsLogger中的afterThrowing作为异常抛出增强，织入到业务层的所有方法中 -->
+			<aop:after-throwing method="afterThrowing" pointcut-ref="pointcut" throwing="e"/>
+			<!-- 3.2.1 将增强类SmbmsLogger中的after作为最终增强，织入到业务层的所有方法中 -->
+			<aop:after method="after" pointcut-ref="pointcut"/>
+		</aop:aspect>
+		
+	</aop:config>
+	<!--END 6、使用AOP实现日志记录。 END-->
+	
+	<!--START 7、使用AOP实现声明式事务管理  START-->
+	<!-- 7.1创建事务管理器 -->
+	<bean id="txManagr" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+		<property name="dataSource" ref="dataSource"/>
+	</bean>
+	<!-- 7.2 使用tx:advice标签创建声明式事务增强，并引入上面定义事务管理器，设置相关属性 -->
+	<tx:advice id="txAdvice" transaction-manager="txManagr">
+		<tx:attributes>
+			<tx:method name="get*" propagation="SUPPORTS"/>
+			<tx:method name="query*" propagation="SUPPORTS" />
+			
+			<tx:method name="insert*" propagation="REQUIRED" rollback-for="Exception"/>
+			<tx:method name="add*" propagation="REQUIRED" rollback-for="Exception"/>
+			<tx:method name="update*" propagation="REQUIRED" rollback-for="Exception"/>
+			<tx:method name="del*" propagation="REQUIRED" rollback-for="Exception"/>
+		</tx:attributes>
+	</tx:advice>
+	
+	<!--END 7、使用AOP实现声明式事务管理  END-->
+	
+</beans>
