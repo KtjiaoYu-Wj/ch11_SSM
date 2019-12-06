@@ -34,7 +34,6 @@ public class UserController {
 	@Resource
 	private UserService userService;
 	
-	
 	//查询用户详情
 	@RequestMapping("/queryUserById/{uid}")
 	public String queryUserById(@PathVariable Integer uid, Model model) {
